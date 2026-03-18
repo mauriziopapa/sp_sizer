@@ -12,6 +12,26 @@ class Settings(BaseSettings):
     ADMIN_EMAIL: str = "admin@studioware.it"
 
     @property
+    def async_database_url(self) -> str:
+        """Ensure the DATABASE_URL uses asyncpg driver."""
+        url = self.DATABASE_URL
+        if url.startswith("postgresql://"):
+            url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        elif url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+        return url
+
+    @property
+    def sync_database_url(self) -> str:
+        """Return a sync-compatible URL for Alembic."""
+        url = self.DATABASE_URL
+        if "+asyncpg" in url:
+            url = url.replace("+asyncpg", "", 1)
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql://", 1)
+        return url
+
+    @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.CORS_ORIGINS.split(",")]
 
