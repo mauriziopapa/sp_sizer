@@ -15,12 +15,30 @@ from app.seed import seed_database
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 
 
+def run_migrations():
+    """Run Alembic migrations to head."""
+    from alembic.config import Config
+    from alembic import command
+
+    alembic_cfg = Config()
+    alembic_cfg.set_main_option("script_location", str(Path(__file__).resolve().parent.parent / "alembic"))
+    alembic_cfg.set_main_option("sqlalchemy.url", settings.async_database_url)
+    command.upgrade(alembic_cfg, "head")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Seed database on startup if empty
+    # Run migrations then seed
+    try:
+        run_migrations()
+        print("Migrations applied successfully")
+    except Exception as e:
+        print(f"Migration failed: {e}")
+
     async with async_session() as db:
         try:
             await seed_database(db)
+            print("Seed completed successfully")
         except Exception as e:
             print(f"Seed skipped or failed: {e}")
     yield
