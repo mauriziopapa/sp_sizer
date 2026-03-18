@@ -16,14 +16,20 @@ STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 
 
 def run_migrations():
-    """Run Alembic migrations to head."""
-    from alembic.config import Config
-    from alembic import command
+    """Run Alembic migrations to head via subprocess to avoid event-loop conflicts."""
+    import subprocess
 
-    alembic_cfg = Config()
-    alembic_cfg.set_main_option("script_location", str(Path(__file__).resolve().parent.parent / "alembic"))
-    alembic_cfg.set_main_option("sqlalchemy.url", settings.async_database_url)
-    command.upgrade(alembic_cfg, "head")
+    backend_dir = Path(__file__).resolve().parent.parent
+    result = subprocess.run(
+        ["python", "-m", "alembic", "upgrade", "head"],
+        cwd=str(backend_dir),
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"alembic upgrade failed:\n{result.stderr}")
+    if result.stdout:
+        print(result.stdout)
 
 
 @asynccontextmanager
